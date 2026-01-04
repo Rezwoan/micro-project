@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-color: #1e1e1e;
+            --text-color: #ffffff;
+            --accent-green: #00e676;
+            --accent-red: #ff5252;
+            --accent-blue: #2979ff;
+            --accent-yellow: #ffea00;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow-x: hidden;
+            padding-bottom: 80px; /* Space for bottom nav */
+        }
+
+        .container { padding: 15px; max-width: 600px; margin: 0 auto; }
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* HEADER */
+        .header {
+            padding: 20px 15px;
+            font-size: 24px; font-weight: bold;
+            background: rgba(30,30,30,0.95); backdrop-filter: blur(10px);
+            position: sticky; top: 0; z-index: 10;
+            border-bottom: 1px solid #333;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .status-badge { font-size: 12px; padding: 5px 10px; border-radius: 20px; background: #333; color: #888; }
+        .status-badge.open { background: rgba(0, 230, 118, 0.2); color: var(--accent-green); }
+        .status-badge.closed { background: rgba(255, 82, 82, 0.2); color: var(--accent-red); }
+
+        /* VIDEO */
+        .video-card {
+            background: #000; border-radius: 16px; overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5); margin-bottom: 20px;
+        }
+        .video-card img { width: 100%; display: block; }
+
+        /* BUTTON GRID */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .btn-card {
+            background: var(--card-color); border: none; padding: 20px;
+            border-radius: 16px; color: white; font-size: 16px; font-weight: 600;
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+            cursor: pointer; transition: transform 0.1s;
+        }
+        .btn-card:active { transform: scale(0.98); }
+        .btn-card i { font-size: 24px; }
+        
+        .btn-lock { background: rgba(255, 82, 82, 0.1); color: var(--accent-red); }
+        .btn-lock.active { background: var(--accent-red); color: white; }
+        
+        .btn-unlock { background: rgba(0, 230, 118, 0.1); color: var(--accent-green); }
+        .btn-unlock.active { background: var(--accent-green); color: #000; }
+
+        .btn-light { background: #333; }
+        .btn-light.on { background: var(--accent-yellow); color: #000; box-shadow: 0 0 15px rgba(255, 234, 0, 0.3); }
+
+        /* LISTS */
+        .list-item {
+            background: var(--card-color); padding: 15px; border-radius: 12px;
+            margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;
+        }
+        .notif-item { cursor: pointer; border-left: 4px solid #555; }
+        .notif-BELL { border-left-color: var(--accent-yellow); }
+        .notif-ALERT { border-left-color: var(--accent-red); }
+        .notif-UNLOCK { border-left-color: var(--accent-green); }
+
+        /* --- PEOPLE GRID LAYOUT (FIXED ALIGNMENT) --- */
+        .profile-grid {
+            display: grid;
+            /* Name | L1 | L2 | Auto | Actions */
+            grid-template-columns: 1fr 40px 40px 50px 70px;
+            gap: 10px;
+            align-items: center;
+        }
+        .profile-header {
+            font-size: 11px; color: #888; margin-bottom: 10px;
+            padding: 0 15px; text-align: center; font-weight: bold;
+        }
+        .profile-header span:first-child { text-align: left; }
+
+        /* INPUTS */
+        input[type="text"] {
+            width: 100%; padding: 15px; background: #333; border: 1px solid #444;
+            color: white; border-radius: 12px; box-sizing: border-box; font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        /* BOTTOM NAV */
+        .bottom-nav {
+            position: fixed; bottom: 0; width: 100%; background: var(--card-color);
+            display: flex; justify-content: space-around; padding: 12px 0;
+            border-top: 1px solid #333; z-index: 100;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .nav-item { background: none; border: none; color: #666; font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .nav-item.active { color: var(--accent-blue); }
+        .nav-icon { font-size: 20px; }
+
+        /* TOASTS */
+        #toast-container {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 2000; width: 90%; max-width: 400px;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .toast {
+            background: rgba(40,40,40,0.95); backdrop-filter: blur(5px);
+            padding: 15px; border-radius: 12px; display: flex; align-items: center; gap: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5); cursor: pointer;
+            animation: slideDown 0.3s ease; border: 1px solid #444;
+        }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* MODAL */
+        #modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 3000; display: none; flex-direction: column;
+        }
+        #modal.active { display: flex; animation: fadeModal 0.2s; }
+        @keyframes fadeModal { from { opacity: 0; } to { opacity: 1; } }
+        
+        .modal-header { padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .modal-body img { max-width: 100%; max-height: 100%; }
+        .modal-footer { padding: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div id="headerTitle">My Home</div>
+        <div id="doorBadge" class="status-badge">Checking...</div>
+    </div>
+
+    <div id="tab-home" class="tab-content container active">
+        <div class="video-card">
+            <img src="{{ url_for('video_feed') }}">
+        </div>
+        
+        <div class="grid">
+            <button id="btnDoor" class="btn-card btn-unlock" onclick="toggleDoor()">
+                <span>🔓</span> <span>Unlock</span>
+            </button>
+            <button class="btn-card" style="background: #333;" onclick="window.location.reload()">
+                <span>🔄</span> <span>Refresh</span>
+            </button>
+        </div>
+
+        <h3 style="margin: 20px 0 10px;">Lighting</h3>
+        <div class="grid">
+            <button id="btnL1" class="btn-card btn-light" onclick="toggleLight(1)">
+                <span>💡</span> <span>Living Room</span>
+            </button>
+            <button id="btnL2" class="btn-card btn-light" onclick="toggleLight(2)">
+                <span>💡</span> <span>Porch</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="tab-people" class="tab-content container">
+        <h3>Manage People</h3>
+        <div id="profilesList">Loading...</div>
+    </div>
+
+    <div id="tab-alerts" class="tab-content container">
+        <h3>Activity Log</h3>
+        <div id="notifList"></div>
+    </div>
+
+    <div id="tab-add" class="tab-content container">
+        <h3>Enroll New Face</h3>
+        <div class="video-card">
+            <img src="{{ url_for('video_feed') }}">
+        </div>
+        <p style="color:#888; text-align:center;">Ensure only one face is visible.</p>
+        <input type="text" id="enrollName" placeholder="Enter Person's Name">
+        <button class="btn-card" style="width:100%; background:var(--accent-blue);" onclick="startEnroll()">
+            Start Scanning
+        </button>
+    </div>
+
+    <div class="bottom-nav">
+        <button class="nav-item active" onclick="switchTab('home')">
+            <span class="nav-icon">🏠</span> Home
+        </button>
+        <button class="nav-item" onclick="switchTab('people')">
+            <span class="nav-icon">👥</span> People
+        </button>
+        <button class="nav-item" onclick="switchTab('alerts')">
+            <span class="nav-icon">🔔</span> Alerts
+        </button>
+        <button class="nav-item" onclick="switchTab('add')">
+            <span class="nav-icon">➕</span> Add
+        </button>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <div id="modal">
+        <div class="modal-header">
+            <h3>Snapshot</h3>
+            <button onclick="closeModal()" style="background:none; border:none; color:white; font-size:24px;">✕</button>
+        </div>
+        <div class="modal-body">
+            <img id="modalImg" src="">
+        </div>
+        <div class="modal-footer">
+            <button class="btn-card" style="background:#333;" onclick="closeModal()">Back</button>
+            <button class="btn-card btn-unlock" onclick="unlockDoor(); closeModal();">Unlock Door</button>
+        </div>
+    </div>
+
+    <audio id="bellSound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
+
+    <script>
+        let currentTab = 'home';
+        let isUnlocked = false;
+        let knownNotifIds = new Set();
+        let lastProfileData = null;
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('tab-' + tab).classList.add('active');
+            event.currentTarget.classList.add('active');
+            
+            const titles = {home:'My Home', people:'Manage Access', alerts:'Activity', add:'Enroll Face'};
+            document.getElementById('headerTitle').innerText = titles[tab];
+
+            // Render profiles if switching to that tab
+            if (tab === 'people' && lastProfileData) renderProfiles(lastProfileData);
+        }
+
+        function toggleDoor() {
+            let ep = isUnlocked ? '/api/lock' : '/api/unlock';
+            fetch(ep, { method: 'POST' });
+        }
+        function unlockDoor() { fetch('/api/unlock', { method: 'POST' }); }
+        function toggleLight(id) { fetch('/api/light/toggle', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: id}) }); }
+
+        function startEnroll() {
+            let name = document.getElementById('enrollName').value;
+            if(!name) return showToast("Enter name", "alert");
+            fetch('/api/enroll', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: name}) });
+            showToast("Look at camera...", "info");
+        }
+
+        function saveProfile(name) {
+            let l1 = document.getElementById(`chk_l1_${name}`).checked;
+            let l2 = document.getElementById(`chk_l2_${name}`).checked;
+            let un = document.getElementById(`chk_un_${name}`).checked;
+            fetch('/api/profile/save', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name, l1, l2, unlock: un}) });
+            showToast("Profile Saved", "info");
+        }
+
+        function deleteProfile(name) {
+            if(!confirm(`Delete ${name}?`)) return;
+            fetch('/api/profile/delete', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name}) })
+            .then(() => {
+                // Remove row visually immediately
+                let row = document.getElementById(`row_${name}`);
+                if(row) row.remove();
+            });
+        }
+
+        function showToast(msg, type, img=null) {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            el.className = 'toast';
+            el.style.borderColor = type === 'BELL' ? 'var(--accent-yellow)' : (type === 'ALERT' ? 'var(--accent-red)' : '#444');
+            let icon = type === 'BELL' ? '🔔' : (type === 'UNLOCK' ? '🔓' : 'ℹ️');
+            el.innerHTML = `<div style="font-size:24px;">${icon}</div><div><b>${msg}</b><br><span style="font-size:12px; color:#888;">Tap to view</span></div>`;
+            el.onclick = () => { if(img) openModal(img); else switchTab('alerts'); el.remove(); };
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 5000);
+        }
+
+        function openModal(imgSrc) {
+            document.getElementById('modalImg').src = imgSrc;
+            document.getElementById('modal').classList.add('active');
+        }
+        function closeModal() { document.getElementById('modal').classList.remove('active'); }
+
+        // --- RENDER PROFILES (GRID LAYOUT) ---
+        function renderProfiles(data) {
+            let html = `
+            <div class="profile-grid profile-header">
+                <span>NAME</span>
+                <span>L1</span>
+                <span>L2</span>
+                <span>AUTO</span>
+                <span>ACT</span>
+            </div>`;
+
+            data.users.forEach(u => {
+                let p = data.profiles[u] || {l1:true, l2:true, unlock:true};
+                html += `
+                <div class="list-item profile-grid" id="row_${u}">
+                    <b style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${u}</b>
+                    <div style="display:flex; justify-content:center;">
+                        <input type="checkbox" id="chk_l1_${u}" ${p.l1!==false?'checked':''} title="Turn on Light 1?">
+                    </div>
+                    <div style="display:flex; justify-content:center;">
+                        <input type="checkbox" id="chk_l2_${u}" ${p.l2!==false?'checked':''} title="Turn on Light 2?">
+                    </div>
+                    <div style="display:flex; justify-content:center;">
+                        <input type="checkbox" id="chk_un_${u}" ${p.unlock!==false?'checked':''} title="Auto-Unlock Door?">
+                    </div>
+                    <div style="display:flex; justify-content:flex-end; gap:5px;">
+                        <button onclick="saveProfile('${u}')" style="background:none; border:none; cursor:pointer;" title="Save">💾</button>
+                        <button onclick="deleteProfile('${u}')" style="background:none; border:none; cursor:pointer;" title="Delete">🗑️</button>
+                    </div>
+                </div>`;
+            });
+            document.getElementById('profilesList').innerHTML = html;
+        }
+
+        // --- POLLING ---
+        setInterval(() => {
+            fetch('/api/status').then(r => r.json()).then(data => {
+                lastProfileData = data;
+                isUnlocked = data.is_unlocked;
+
+                // Status Badge
+                const badge = document.getElementById('doorBadge');
+                badge.innerText = isUnlocked ? "UNLOCKED" : "LOCKED";
+                badge.className = isUnlocked ? "status-badge open" : "status-badge closed";
+
+                // Door Button
+                const btnDoor = document.getElementById('btnDoor');
+                if(isUnlocked) {
+                    btnDoor.className = "btn-card btn-lock active";
+                    btnDoor.innerHTML = "<span>🔒</span> <span>Lock Door</span>";
+                } else {
+                    btnDoor.className = "btn-card btn-unlock";
+                    btnDoor.innerHTML = "<span>🔓</span> <span>Unlock</span>";
+                }
+
+                // Light Buttons
+                document.getElementById('btnL1').className = `btn-card btn-light ${data.l1 ? 'on' : ''}`;
+                document.getElementById('btnL2').className = `btn-card btn-light ${data.l2 ? 'on' : ''}`;
+
+                // Notifications
+                data.notifications.forEach(n => {
+                    if(!knownNotifIds.has(n.id)) {
+                        knownNotifIds.add(n.id);
+                        showToast(n.msg, n.type, n.img);
+                        if(n.type === 'BELL') document.getElementById('bellSound').play().catch(e=>{});
+                    }
+                });
+
+                // Render Alerts List
+                if(currentTab === 'alerts') {
+                    let html = "";
+                    data.notifications.forEach(n => {
+                        let imgFunc = n.img ? `onclick="openModal('${n.img}')"` : "";
+                        let thumb = n.img ? `<img src="${n.img}" style="width:50px; height:50px; border-radius:4px; object-fit:cover; margin-right:10px;">` : "";
+                        html += `
+                        <div class="list-item notif-${n.type}" ${imgFunc}>
+                            <div style="display:flex; align-items:center;">
+                                ${thumb}
+                                <div><div style="font-size:12px; color:#888;">${n.time}</div><div>${n.msg}</div></div>
+                            </div>
+                        </div>`;
+                    });
+                    document.getElementById('notifList').innerHTML = html;
+                }
+            });
+        }, 1000);
+    </script>
+</body>
+</html>

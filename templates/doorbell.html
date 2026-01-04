@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Doorbell</title>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; display: flex; flex-direction: column; align-items: center; height: 100vh; }
+        .video-wrapper { flex-grow: 1; display: flex; align-items: center; justify-content: center; width: 100%; }
+        
+        /* FIX: Removed 'transform: scaleX(-1)' so it matches the dashboard */
+        img { height: 100%; max-width: 100%; object-fit: contain; }
+        
+        .button-area { width: 100%; padding: 20px; background: #111; text-align: center; }
+        .ring-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(220, 53, 69, 0.7);
+        }
+        .ring-btn:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+    <div class="video-wrapper">
+        <img src="{{ url_for('video_feed') }}">
+    </div>
+    
+    <div class="button-area">
+        <button class="ring-btn" onclick="ringBell()">🔔</button>
+    </div>
+
+    <script>
+        function ringBell() {
+            fetch('/api/ring', { method: 'POST' });
+            // Visual feedback on button
+            let btn = document.querySelector('.ring-btn');
+            btn.style.backgroundColor = "#ffc107";
+            setTimeout(() => { btn.style.backgroundColor = "#dc3545"; }, 2000);
+        }
+    </script>
+</body>
+</html>
